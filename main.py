@@ -19,6 +19,7 @@ def load_config():
     # 環境変数 (GitHub Secrets) を優先し、なければ config.json から取得
     webhook_url = os.environ.get("DISCORD_WEBHOOK_URL") or config_file_data.get("discord_webhook_url")
     gemini_key = os.environ.get("GEMINI_API_KEY") or config_file_data.get("gemini_api_key")
+    gemini_model = os.environ.get("GEMINI_MODEL") or config_file_data.get("gemini_model") or "gemini-1.5-flash"
     
     # RSSのURLリスト
     rss_config = config_file_data.get("rss", {
@@ -27,7 +28,7 @@ def load_config():
         "qiita": "https://qiita.com/tags/game/feed"
     })
 
-    return webhook_url, gemini_key, rss_config
+    return webhook_url, gemini_key, gemini_model, rss_config
 
 def get_rss_items(source_name, url, limit=40):
     """RSSから記事情報を取得する"""
@@ -44,32 +45,11 @@ def get_rss_items(source_name, url, limit=40):
         })
     return items
 
-def get_best_model(api_key):
-    """利用可能なモデルの中から最適なものを探す"""
-    genai.configure(api_key=api_key)
-    try:
-        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        priorities = [
-            'models/gemini-1.5-flash', 
-            'models/gemini-1.5-flash-latest', 
-            'models/gemini-1.0-pro', 
-            'models/gemini-pro'
-        ]
-        for target in priorities:
-            if target in available_models:
-                return target
-        return available_models[0] if available_models else None
-    except Exception as e:
-        print(f"Warning: Failed to list models ({e}).")
-        return 'models/gemini-1.5-flash'
-
-def summarize_with_gemini(api_key, articles):
+def summarize_with_gemini(api_key, model_name, articles):
     """Gemini APIを使用して選別・要約を行う"""
-    model_name = get_best_model(api_key)
-    if not model_name:
-        return "利用可能なGeminiモデルが見つかりませんでした。"
-
-    print(f"Selected model: {model_name}")
+    genai.configure(api_key=api_key)
+    
+    print(f"Using model: {model_name}")
     
     # 文字列のリスト内包表記での f-string 修正
     article_text = "\n".join([f"- [{a['source']}] {a['title']} (URL: {a['link']})" for a in articles])
@@ -132,7 +112,7 @@ def post_to_discord(webhook_url, content):
 
 def main():
     # 1. 設定読み込み
-    webhook_url, gemini_key, rss_urls = load_config()
+    webhook_url, gemini_key, gemini_model, rss_urls = load_config()
     
     if not webhook_url or not gemini_key:
         print("Error: Webhook URL or Gemini API Key is missing.")
@@ -149,8 +129,8 @@ def main():
         return
 
     # 3. Geminiで選別・要約
-    print(f"Analyzing {len(all_articles)} articles. Selecting top 15...")
-    summary_report = summarize_with_gemini(gemini_key, all_articles)
+    print(f"Analyzing {len(all_articles)} articles. Selecting top 15 using {gemini_model}...")
+    summary_report = summarize_with_gemini(gemini_key, gemini_model, all_articles)
 
     # 4. メッセージ整形
     today = datetime.date.today().strftime("%Y-%m-%d")
