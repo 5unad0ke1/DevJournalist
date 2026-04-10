@@ -20,7 +20,7 @@ def load_config():
     webhook_url = os.environ.get("DISCORD_WEBHOOK_URL") or config_file_data.get("discord_webhook_url")
     gemini_key = os.environ.get("GEMINI_API_KEY") or config_file_data.get("gemini_api_key")
     
-    # RSSのURLリスト（機密情報ではないのでデフォルト値を用意）
+    # RSSのURLリスト
     rss_config = config_file_data.get("rss", {
         "zenn": "https://zenn.dev/topics/game/feed",
         "reddit": "https://www.reddit.com/r/gamedev/.rss",
@@ -71,7 +71,8 @@ def summarize_with_gemini(api_key, articles):
 
     print(f"Selected model: {model_name}")
     
-    article_text = "\n".join([f("- [{a['source']}] {a['title']} (URL: {a['link']})") for a in articles])
+    # 文字列のリスト内包表記での f-string 修正
+    article_text = "\n".join([f"- [{a['source']}] {a['title']} (URL: {a['link']})" for a in articles])
     
     prompt = f"""
 あなたは世界最高峰のゲーム開発ニュース編集者です。
@@ -130,11 +131,11 @@ def post_to_discord(webhook_url, content):
             time.sleep(1)
 
 def main():
-    # 1. 設定読み込み（環境変数を優先）
+    # 1. 設定読み込み
     webhook_url, gemini_key, rss_urls = load_config()
     
     if not webhook_url or not gemini_key:
-        print("Error: Webhook URL or Gemini API Key is missing. Check Secrets or config.json.")
+        print("Error: Webhook URL or Gemini API Key is missing.")
         return
 
     # 2. 情報を取得
@@ -147,7 +148,7 @@ def main():
         print("Error: No articles found.")
         return
 
-    # 3. Geminiで15件を選別・要約
+    # 3. Geminiで選別・要約
     print(f"Analyzing {len(all_articles)} articles. Selecting top 15...")
     summary_report = summarize_with_gemini(gemini_key, all_articles)
 
