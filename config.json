@@ -1,0 +1,9 @@
+{
+  "discord_webhook_url": "TESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTEST",
+  "gemini_api_key": "TESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTEST",
+  "rss": {
+    "zenn": "https://zenn.dev/topics/game/feed",
+    "reddit": "https://www.reddit.com/r/gamedev/.rss",
+    "qiita": "https://qiita.com/tags/game/feed"
+  }
+}
